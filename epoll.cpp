@@ -64,7 +64,7 @@ public:
 };
 void ThreadSafeQueue::push(int fd){
 	std::unique_lock<std::mutex>lk(mtx);
-	std::cout << "fd#" << fd << ". Push to the Queue\n";
+//	std::cout << "fd#" << fd << ". Push to the Queue\n";
 	Queue.push(fd);
 }
 int ThreadSafeQueue::pop(int thN){
@@ -72,7 +72,7 @@ int ThreadSafeQueue::pop(int thN){
 	int next;
 	if (!Queue.empty()){					//если очередь сокетов не пустая, то извлекаем сокет
 		next = Queue.front();
-		std::cout << "fd#" << next << ". Pop from the Queue\n";
+//		std::cout << "fd#" << next << ". Pop from the Queue\n";
 		Queue.pop();
 	}
 	else{ 
@@ -99,13 +99,13 @@ void RequestHandle(int thN){
 		{
 			shutdown(next_fd, SHUT_RDWR);
 			close(next_fd);
-			std::cout << "socket#" << next_fd << " shutdown.\n";
+//			std::cout << "socket#" << next_fd << " shutdown.\n";
 		}
 		else if (RecvResult == -1){
 			printf("recv=-1. errno=%d\n", errno);
 		} else if(RecvResult > 0){
-			std::cout << "thread#" << thN << ". Data transfer...\n";
-			std::cout << "RecvResult=" << RecvResult << "\n";
+//			std::cout << "thread#" << thN << ". Data transfer...\n";
+//			std::cout << "RecvResult=" << RecvResult << "\n";
 			std::string request(buf, RecvResult);
 		    std::smatch re_result;										//список совпадений запроса регулярного выражения.
 		    std::string answer;											//строка ответа на запрос
@@ -129,7 +129,7 @@ void RequestHandle(int thN){
 				}
 			}	
 			send(next_fd, answer.c_str(), answer.size(), MSG_NOSIGNAL);
-			std::cout << "thread#" << thN << ". Transfer finished.\n";
+//			std::cout << "thread#" << thN << ". Transfer finished.\n";
 		}
 	}
 }
@@ -149,15 +149,15 @@ int main(int argc, char** argv)
 		switch (opt){
 			case 'h':
 				ip = optarg;
-				std::cout << "ip=" << ip << "\n";
+//				std::cout << "ip=" << ip << "\n";
 				break;
 			case 'p':
 				port = optarg;
-				std::cout << "port=" << port << "\n";
+//				std::cout << "port=" << port << "\n";
 				break;
 			case 'd':
-				directory = std::string(".") + optarg;
-				std::cout << "directory=" << directory << "\n";
+				directory = optarg;
+//				std::cout << "directory=" << directory << "\n";
 				break;
 			default:
 				printf("option error: %c\n", opt);
@@ -193,16 +193,7 @@ int main(int argc, char** argv)
 	Event.data.fd = MasterSocket;	//присваиваем сокет
 	Event.events = EPOLLIN;			//установка режима регистрации событий - доступность на чтение
 	
-	//организуем условную переменную
-
-/*
-	pthread_t workers[NTHREADS];
-	pthread_attr_t attr;			//структура установки атрибутов при создании потока.
-	pthread_attr_init(&attr)		//инициализация структуры pthread_attr_t
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);	//установка типа потока в струтуру
-	for(int i = 0; i < NTHREADS; ++i)
-		pthread_create(worker + i, &attr, RequestHandle, NULL);
-*/
+	//организуем потоки с обработкой запросов
 	std::vector<std::thread> threads;
 	for(int i = 0; i < NTHREADS; ++i)
 		threads.emplace_back(std::bind(RequestHandle, i));
@@ -217,10 +208,10 @@ int main(int argc, char** argv)
 			continue;
 		for (int i = 0; i < N; i++)
 		{
-			std::cout << "Event in fd#" << Events[i].data.fd << "\n";
+//			std::cout << "Event in fd#" << Events[i].data.fd << "\n";
 			if(Events[i].data.fd == MasterSocket){		//если событие происходит в Мастерсокете, то добавляем SlaveSocket в Epoll
 				int SlaveSocket = accept(MasterSocket, 0, 0);
-				std::cout << "fd#" << SlaveSocket << ". accept\n";
+//				std::cout << "fd#" << SlaveSocket << ". accept\n";
 				set_nonblock(SlaveSocket);		//
 				epoll_event Event;				//создаем структуру для хранения событий дескриптора
 				Event.data.fd = SlaveSocket;	//присваиваем сокет
@@ -230,7 +221,7 @@ int main(int argc, char** argv)
 				SocketQueue.push(Events[i].data.fd);
 			}
 		}
-		std::cout << "events_pushed\n";
+//		std::cout << "events_pushed\n";
 		while(!SocketQueue.empty()){
 			std::unique_lock<std::mutex> lk(mtx);
 			cv_start_threads.notify_all();
